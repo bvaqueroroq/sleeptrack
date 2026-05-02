@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SleepTrack Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #f5f3ee;
+    color: #2d2d2d;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: white;
+    border-bottom: 2px solid #e8e4dc;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+
+  .moon-icon {
+    width: 44px; height: 44px;
+    background: #fef3c7;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  h1 { font-size: 22px; font-weight: 800; color: #1a1a1a; }
+  h1 span { color: #6366f1; }
+  .tagline { font-size: 13px; color: #888; font-weight: 400; }
+
+  .night-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .night-tabs label { font-size: 13px; color: #888; margin-right: 4px; }
+
+  .night-btn {
+    background: #f5f3ee;
+    border: 2px solid #e8e4dc;
+    color: #666;
+    padding: 6px 18px;
+    border-radius: 100px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .night-btn:hover { border-color: #6366f1; color: #6366f1; }
+  .night-btn.active { background: #6366f1; border-color: #6366f1; color: white; }
+
+  .content { max-width: 1100px; margin: 0 auto; padding: 36px 24px; }
+
+  .upload-area {
+    background: white;
+    border: 2px dashed #d1d5db;
+    border-radius: 20px;
+    padding: 56px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.drag-over { border-color: #6366f1; background: #fafafe; }
+  .upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-emoji { font-size: 52px; display: block; margin-bottom: 16px; }
+  .upload-area h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #1a1a1a; }
+  .upload-area p { font-size: 14px; color: #888; }
+  .upload-area strong { color: #6366f1; }
+
+  #dashboard { display: none; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 18px;
+    padding: 24px 22px;
+    border: 2px solid #e8e4dc;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: #c7d2fe; }
+  .card-icon { font-size: 28px; margin-bottom: 10px; display: block; }
+  .card-label { font-size: 12px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .card-value { font-size: 2.2rem; font-weight: 800; color: #1a1a1a; line-height: 1; }
+  .card-sub { font-size: 12px; color: #aaa; margin-top: 6px; }
+
+  .badge { display: inline-block; margin-top: 8px; padding: 3px 12px; border-radius: 100px; font-size: 12px; font-weight: 700; }
+  .badge-good     { background: #d1fae5; color: #065f46; }
+  .badge-moderate { background: #fef3c7; color: #92400e; }
+  .badge-poor     { background: #fee2e2; color: #991b1b; }
+
+  .section-header { display: flex; align-items: center; gap: 10px; margin: 32px 0 16px; }
+  .section-header h2 { font-size: 16px; font-weight: 800; color: #1a1a1a; }
+  .section-header p { font-size: 13px; color: #aaa; margin-top: 2px; }
+  .section-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+
+  .chart-box {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    border: 2px solid #e8e4dc;
+  }
+  .chart-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .chart-box p  { font-size: 12px; color: #aaa; margin-bottom: 18px; }
+  .chart-wrap    { position: relative; height: 220px; }
+  .chart-wrap-lg { position: relative; height: 260px; }
+
+  footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 2px solid #e8e4dc;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #bbb;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .fade   { animation: fadeUp 0.4s ease both; }
+  .fade-2 { animation: fadeUp 0.4s 0.08s ease both; }
+  .fade-3 { animation: fadeUp 0.4s 0.16s ease both; }
+
+  @media (max-width: 640px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .topbar { padding: 16px 20px; }
+    .content { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="moon-icon">🌙</div>
+    <div>
+      <h1>Sleep<span>Track</span></h1>
+      <div class="tagline">Sleep quality analysis dashboard</div>
+    </div>
+  </div>
+  <div class="night-tabs" id="nightTabs" style="display:none">
+    <label>Select night →</label>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="upload-area" id="uploadArea">
+    <input type="file" id="fileInput" accept=".csv">
+    <span class="upload-emoji">📂</span>
+    <h2>Load your sleep data</h2>
+    <p>Click here or drag and drop your <strong>sleeptrack_data.csv</strong> file</p>
+  </div>
+
+  <div id="dashboard">
+
+    <div class="section-header fade">
+      <div class="section-dot" style="background:#6366f1"></div>
+      <div><h2>Night Summary</h2><p>Overview of the selected night</p></div>
+    </div>
+
+    <div class="cards fade">
+      <div class="card">
+        <span class="card-icon">⭐</span>
+        <div class="card-label">Sleep Score</div>
+        <div class="card-value" id="cardScore">--</div>
+        <div id="cardBadge"></div>
+      </div>
+      <div class="card">
+        <span class="card-icon">🔊</span>
+        <div class="card-label">Sound Spikes</div>
+        <div class="card-value" id="cardSound">--</div>
+        <div class="card-sub">noise disturbances</div>
+      </div>
+      <div class="card">
+        <span class="card-icon">💡</span>
+        <div class="card-label">Light Spikes</div>
+        <div class="card-value" id="cardLight">--</div>
+        <div class="card-sub">sudden light changes</div>
+      </div>
+      <div class="card">
+        <span class="card-icon">🏃</span>
+        <div class="card-label">Movements</div>
+        <div class="card-value" id="cardMotion">--</div>
+        <div class="card-sub">body movements</div>
+      </div>
+    </div>
+
+    <div class="section-header fade-2">
+      <div class="section-dot" style="background:#f59e0b"></div>
+      <div><h2>Sensor Readings Over Time</h2><p>What each sensor recorded throughout the night</p></div>
+    </div>
+
+    <div style="display:grid; gap:18px; margin-bottom:18px" class="fade-2">
+      <div class="chart-box">
+        <h3>🔊 Sound Level</h3>
+        <p>Ambient noise every 5 seconds — highlighted dots are sudden spikes</p>
+        <div class="chart-wrap-lg"><canvas id="chartSound"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>💡 Light Intensity</h3>
+        <p>Lux readings every 5 seconds — highlighted dots are sudden increases</p>
+        <div class="chart-wrap-lg"><canvas id="chartLight"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>🏃 Movement Events</h3>
+        <p>Each bar = a movement detected during the night</p>
+        <div class="chart-wrap"><canvas id="chartMotion"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-header fade-3">
+      <div class="section-dot" style="background:#10b981"></div>
+      <div><h2>Correlation Analysis</h2><p>How sensors relate to each other — each dot is a time window</p></div>
+    </div>
+
+    <div class="charts-grid fade-3">
+      <div class="chart-box">
+        <h3>🔊 Noise vs 🏃 Movement</h3>
+        <p>Does noise wake you up?</p>
+        <div class="chart-wrap"><canvas id="chartNvM"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>💡 Light vs 🏃 Movement</h3>
+        <p>Does light affect restlessness?</p>
+        <div class="chart-wrap"><canvas id="chartLvM"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>🔊 Noise vs 💡 Light</h3>
+        <p>Environmental conditions together</p>
+        <div class="chart-wrap"><canvas id="chartNvL"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>⭐ Score per Night</h3>
+        <p>Sleep quality trend across all nights</p>
+        <div class="chart-wrap"><canvas id="chartScores"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-header fade-3" style="margin-top:8px">
+      <div class="section-dot" style="background:#f43f5e"></div>
+      <div><h2>Disturbance Breakdown</h2><p>What disturbed your sleep and when</p></div>
+    </div>
+
+    <div class="charts-grid fade-3">
+      <div class="chart-box">
+        <h3>What disturbed you most?</h3>
+        <p>Proportion of each disturbance type</p>
+        <div class="chart-wrap"><canvas id="chartPie"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>When were you most disturbed?</h3>
+        <p>Disturbances grouped by hour of the night</p>
+        <div class="chart-wrap"><canvas id="chartHourly"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span>SleepTrack · Group Project</span>
+    <span id="footerFile">No file loaded yet</span>
+  </footer>
+
+</div>
+
+<script>
+Chart.defaults.color = '#aaa';
+Chart.defaults.font.family = "'Nunito', sans-serif";
+Chart.defaults.font.size = 12;
+
+let allData = {}, summaries = {}, charts = {};
+
+function parseCSV(text) {
+  allData = {}; summaries = {};
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    if (line.startsWith('Night_Number')) continue;
+    if (line.includes('SUMMARY NIGHT')) {
+      const nm = line.match(/NIGHT (\d+)/);
+      const sm = line.match(/Score: (\d+)/);
+      const qm = line.match(/Quality: ([^;]+)/);
+      const dm = line.match(/Disturbances: (\d+)/);
+      if (nm) summaries[+nm[1]] = { score: sm?+sm[1]:0, quality: qm?qm[1].trim():'?', disturbances: dm?+dm[1]:0 };
+      continue;
+    }
+    const p = line.split(';');
+    if (p.length < 5) continue;
+    const night = parseInt(p[0]);
+    if (isNaN(night)) continue;
+    if (!allData[night]) allData[night] = [];
+    allData[night].push({ ts: parseInt(p[1])||0, sound: parseFloat(p[2])||0, light: parseFloat(p[3])||0, motion: p[4].trim() });
+  }
+  for (const night of Object.keys(allData)) {
+    const rows = allData[night];
+    for (let i = 0; i < rows.length; i++) {
+      rows[i].isSoundSpike = rows[i].sound > 0 && rows[i].sound - (i>0?rows[i-1].sound:0) > 100;
+      rows[i].isLightSpike = rows[i].light > 0 && rows[i].light - (i>0?rows[i-1].light:0) > 50;
+    }
+  }
+}
+
+function fmtTime(ms) {
+  const m = Math.floor(ms/60000), h = Math.floor(m/60);
+  return `${String(h).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+}
+
+function kill(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+const baseOpts = () => ({
+  responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
+  plugins: { legend:{display:false}, tooltip:{ backgroundColor:'white', borderColor:'#e8e4dc', borderWidth:1, titleColor:'#1a1a1a', bodyColor:'#888', padding:10 } }
+});
+const xSc = (n=8) => ({ grid:{color:'#f0ede8'}, ticks:{maxTicksLimit:n,color:'#bbb'}, border:{color:'#e8e4dc'} });
+const ySc = (label) => ({ title:{display:true,text:label,color:'#bbb',font:{size:11}}, grid:{color:'#f0ede8'}, ticks:{color:'#bbb'}, border:{color:'#e8e4dc'} });
+
+function renderNight(night) {
+  const rows = allData[night] || [];
+  const sum  = summaries[night];
+
+  document.querySelectorAll('.night-btn').forEach(b => b.classList.toggle('active', +b.dataset.night === night));
+
+  if (sum) {
+    document.getElementById('cardScore').textContent = sum.score;
+    const cls = sum.score>=80?'badge-good':sum.score>=60?'badge-moderate':'badge-poor';
+    document.getElementById('cardBadge').innerHTML = `<span class="badge ${cls}">${sum.quality}</span>`;
+  }
+
+  const ss = rows.filter(r=>r.isSoundSpike).length;
+  const ls = rows.filter(r=>r.isLightSpike).length;
+  const mv = rows.filter(r=>r.motion==='MOVEMENT'||r.motion==='1').length;
+  document.getElementById('cardSound').textContent  = ss;
+  document.getElementById('cardLight').textContent  = ls;
+  document.getElementById('cardMotion').textContent = mv;
+
+  const labels = rows.map(r=>fmtTime(r.ts));
+
+  kill('sound');
+  charts.sound = new Chart(document.getElementById('chartSound'), {
+    type:'line', data:{ labels, datasets:[{ data:rows.map(r=>r.sound), borderColor:'#f43f5e', backgroundColor:'#fef2f2', borderWidth:2, tension:0.4, fill:true, pointRadius:rows.map(r=>r.isSoundSpike?5:2), pointBackgroundColor:rows.map(r=>r.isSoundSpike?'#f43f5e':'#fca5a5') }] },
+    options:{ ...baseOpts(), scales:{ x:xSc(), y:ySc('Sound (0–1023)') } }
+  });
+
+  kill('light');
+  charts.light = new Chart(document.getElementById('chartLight'), {
+    type:'line', data:{ labels, datasets:[{ data:rows.map(r=>r.light), borderColor:'#10b981', backgroundColor:'#f0fdf4', borderWidth:2, tension:0.4, fill:true, pointRadius:rows.map(r=>r.isLightSpike?5:2), pointBackgroundColor:rows.map(r=>r.isLightSpike?'#10b981':'#6ee7b7') }] },
+    options:{ ...baseOpts(), scales:{ x:xSc(), y:ySc('Light (lux)') } }
+  });
+
+  kill('motion');
+  charts.motion = new Chart(document.getElementById('chartMotion'), {
+    type:'bar', data:{ labels, datasets:[{ data:rows.map(r=>(r.motion==='MOVEMENT'||r.motion==='1')?1:0), backgroundColor:'#c7d2fe', borderColor:'#6366f1', borderWidth:1, borderRadius:4 }] },
+    options:{ ...baseOpts(), scales:{ x:xSc(12), y:{ ...ySc('Movement'), max:1.5, ticks:{stepSize:1,color:'#bbb'} } } }
+  });
+
+  const BIN=10, bins=[];
+  for (let i=0; i<rows.length; i+=BIN) {
+    const s=rows.slice(i,i+BIN);
+    bins.push({ as:s.reduce((a,r)=>a+r.sound,0)/s.length, al:s.reduce((a,r)=>a+r.light,0)/s.length, mc:s.filter(r=>r.motion==='MOVEMENT'||r.motion==='1').length });
+  }
+
+  const scOpts = (xl,yl) => ({ ...baseOpts(), plugins:{...baseOpts().plugins,legend:{display:false}}, scales:{ x:{title:{display:true,text:xl,color:'#bbb',font:{size:11}},grid:{color:'#f0ede8'},ticks:{color:'#bbb'},border:{color:'#e8e4dc'}}, y:{title:{display:true,text:yl,color:'#bbb',font:{size:11}},grid:{color:'#f0ede8'},ticks:{color:'#bbb'},border:{color:'#e8e4dc'}} } });
+
+  kill('nvm'); charts.nvm = new Chart(document.getElementById('chartNvM'),{ type:'scatter', data:{datasets:[{data:bins.map(b=>({x:b.as,y:b.mc})),backgroundColor:'#fda4af',borderColor:'#f43f5e',pointRadius:6}]}, options:scOpts('Avg Sound Level','Movement Count') });
+  kill('lvm'); charts.lvm = new Chart(document.getElementById('chartLvM'),{ type:'scatter', data:{datasets:[{data:bins.map(b=>({x:b.al,y:b.mc})),backgroundColor:'#6ee7b7',borderColor:'#10b981',pointRadius:6}]}, options:scOpts('Avg Light (lux)','Movement Count') });
+  kill('nvl'); charts.nvl = new Chart(document.getElementById('chartNvL'),{ type:'scatter', data:{datasets:[{data:bins.map(b=>({x:b.as,y:b.al})),backgroundColor:'#fde68a',borderColor:'#f59e0b',pointRadius:6}]}, options:scOpts('Avg Sound Level','Avg Light (lux)') });
+
+  kill('scores');
+  const ns=Object.keys(summaries).map(Number).sort((a,b)=>a-b), sv=ns.map(n=>summaries[n].score);
+  charts.scores = new Chart(document.getElementById('chartScores'),{ type:'line', data:{labels:ns.map(n=>`Night ${n}`),datasets:[{data:sv,borderColor:'#6366f1',backgroundColor:'#eef2ff',borderWidth:2.5,tension:0.4,fill:true,pointRadius:6,pointBackgroundColor:sv.map(s=>s>=80?'#10b981':s>=60?'#f59e0b':'#f43f5e')}]}, options:{...baseOpts(),scales:{x:xSc(),y:{...ySc('Score'),min:0,max:100}}} });
+
+  kill('pie');
+  charts.pie = new Chart(document.getElementById('chartPie'),{ type:'doughnut', data:{labels:['Sound Spikes','Light Spikes','Movements'],datasets:[{data:[ss,ls,mv],backgroundColor:['#fda4af','#6ee7b7','#c7d2fe'],borderColor:['#f43f5e','#10b981','#6366f1'],borderWidth:2}]}, options:{...baseOpts(),cutout:'60%',plugins:{legend:{display:true,position:'bottom',labels:{color:'#888',padding:14,font:{size:12}}}}} });
+
+  kill('hourly');
+  const hb=new Array(24).fill(0);
+  rows.forEach(r=>{ if(r.motion==='MOVEMENT'||r.motion==='1'||r.isSoundSpike||r.isLightSpike) hb[Math.floor(r.ts/3600000)%24]++; });
+  const mx=Math.max(...hb)||1;
+  charts.hourly = new Chart(document.getElementById('chartHourly'),{ type:'bar', data:{labels:hb.map((_,i)=>`${String(i).padStart(2,'0')}h`),datasets:[{data:hb,backgroundColor:hb.map(v=>`rgba(99,102,241,${0.15+0.85*(v/mx)})`),borderRadius:4}]}, options:{...baseOpts(),scales:{x:xSc(12),y:ySc('Disturbances')}} });
+}
+
+function loadFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    parseCSV(e.target.result);
+    const nights = Object.keys(allData).map(Number).sort((a,b)=>a-b);
+    if (!nights.length) { alert('No data found. Check your CSV format.'); return; }
+    const tabs = document.getElementById('nightTabs');
+    tabs.innerHTML = '<label>Select night →</label>';
+    tabs.style.display = 'flex';
+    nights.forEach(n => {
+      const btn = document.createElement('button');
+      btn.className = 'night-btn'; btn.textContent = `Night ${n}`; btn.dataset.night = n;
+      btn.onclick = () => renderNight(n);
+      tabs.appendChild(btn);
+    });
+    document.getElementById('uploadArea').style.display = 'none';
+    document.getElementById('dashboard').style.display  = 'block';
+    document.getElementById('footerFile').textContent   = file.name;
+    renderNight(nights[0]);
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('fileInput').addEventListener('change', e => loadFile(e.target.files[0]));
+const zone = document.getElementById('uploadArea');
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); loadFile(e.dataTransfer.files[0]); });
+</script>
+</body>
+</html>
